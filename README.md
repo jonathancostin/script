@@ -3,7 +3,7 @@
 ## Overview
 
 Brief description of what this project/script does and its main purpose. Include the problem it solves and the value it provides to users.
-
+APOLGIES FOR AI SLOP
 ## Prerequisites
 
 List all requirements needed before running the scripts:
