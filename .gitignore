@@ -1,25 +1,11 @@
 phone/
-
-# ignore all “build” dirs anywhere
 build/
-
-# ignore all “logs” dirs anywhere
 logs/
-
-# ignore all node_modules dirs (common in JS projects)
 node_modules/
-
-# ignore any “cache” folder, no matter where it lives
 cache/
-
-# ignore nested reports under modules
-
-# ignore a specific deep path (relative to repo root)
-config/docker/secrets/
-
-# ignore MacOS Finder files
 .DS_Store
 results/
 archive/
 web_runner/
 windows/
+wip/
