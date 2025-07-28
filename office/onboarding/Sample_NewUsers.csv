@@ -1,0 +1,5 @@
+DisplayName,UserPrincipalName,LicenseSku,Groups,FirstName,LastName,Department,JobTitle,Manager
+John Doe,john.doe@company.com,ENTERPRISEPACK,"IT-Team,All-Staff",John,Doe,IT,Developer,manager@company.com
+Jane Smith,jane.smith@company.com,BUSINESS_PREMIUM,"HR-Team,Managers",Jane,Smith,HR,HR Manager,ceo@company.com
+Mike Johnson,mike.johnson@company.com,,Finance-Team,Mike,Johnson,Finance,Accountant,finance.manager@company.com
+Sarah Wilson,sarah.wilson@company.com,E5_LICENSE,"Marketing-Team,Remote-Workers",Sarah,Wilson,Marketing,Marketing Specialist,marketing.manager@company.com
