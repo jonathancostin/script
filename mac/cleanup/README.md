@@ -22,16 +22,16 @@ This script provides a safe and thorough approach to cleaning up common macOS sy
 ### Basic Usage
 ```bash
 # Run full cleanup with confirmations
-./cleanup.sh
+./maincleanup.sh
 
 # Preview what would be cleaned (recommended first run)
-./cleanup.sh --dry-run
+./maincleanup.sh --dry-run
 
 # Run cleanup without confirmations
-./cleanup.sh --yes
+./maincleanup.sh --yes
 
 # Quick cleanup with verbose output
-./cleanup.sh --quick --verbose
+./maincleanup.sh --quick --verbose
 ```
 
 ### Command Line Options
@@ -49,19 +49,19 @@ This script provides a safe and thorough approach to cleaning up common macOS sy
 
 ```bash
 # First time usage - see what would be cleaned
-./cleanup.sh --dry-run --verbose
+./maincleanup.sh --dry-run --verbose
 
 # Safe interactive cleanup
-./cleanup.sh
+./maincleanup.sh
 
 # Automated cleanup for scripts/cron jobs
-./cleanup.sh --yes --quick
+./maincleanup.sh --yes --quick
 
 # Verbose cleanup with confirmations
-./cleanup.sh --verbose
+./maincleanup.sh --verbose
 
 # Dry run of quick mode
-./cleanup.sh --dry-run --quick
+./maincleanup.sh --dry-run --quick
 ```
 
 ## What Gets Cleaned

@@ -5,6 +5,11 @@
 # Description:    Mac System Cleanup Script - Comprehensive cleanup utility
 #                 for macOS systems to remove temporary files, caches, downloads,
 #                 and empty trash to optimize system performance
+#
+# Repository Integration:
+#   Ensure this script is integrated into the CI/CD pipeline for automated
+#   cleaning operations after build and test phases. Update the cron jobs
+#   as necessary when deploying to different environments.
 # Author:         [Your Name]
 # Email:          [your.email@domain.com]
 # Date Created:   [Creation Date]
@@ -43,6 +48,9 @@
 #   - macOS 10.12 or later
 #   - Administrator privileges may be required for some operations
 #   - Sufficient disk space for temporary operations
+#
+# End with newline and LF line endings for cross-system compatibility.
+# Please configure your text editor accordingly.
 #
 # Disclaimer:
 #   This script is provided "as is" without warranty of any kind.
