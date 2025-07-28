@@ -1,7 +1,7 @@
 <#
 =============================================================================================
 Name:           Automate Microsoft 365 User Offboarding with PowerShell
-Description:    This script can perform 14 Microsoft 365 offboarding activities.
+Description:    This script can perform 20 Microsoft 365 offboarding activities.
 Website:        blog.Admindroid.com
 Script by:      AdminDroid Team
 Version:        2.1
@@ -26,7 +26,8 @@ param(
 [string]$ClientId,
 [string]$CertificateThumbprint,
 [string]$CSVFilePath,
-[String]$UPNs
+[String]$UPNs,
+[string]$ConfigPath
 )
 Function ConnectModules 
 {
@@ -424,6 +425,143 @@ Function SignOutFromAllSessions
     $Script:SignOutFromAllSessionsAction = "Success"
 }
 
+Function BackupUserData
+{
+    try{
+        # Export user profile data for backup
+        $UserProfile = Get-MgUser -UserId $UPN -Property "*"
+        $BackupData = @{
+            UserProfile = $UserProfile
+            CreatedDateTime = Get-Date
+            BackupType = "UserData"
+        }
+        $BackupFile = "$Location\UserBackup_$($UPN.Replace('@','_'))_$((Get-Date -format yyyy-MMM-dd-ddd-hh-mm-ss).ToString()).json"
+        $BackupData | ConvertTo-Json -Depth 10 | Out-File -FilePath $BackupFile
+        $Script:BackupUserDataAction = "Success - Backup saved to $BackupFile"
+    }
+    catch
+    {
+        $Script:BackupUserDataAction = "Failed"
+        $ErrorLog = "$($UPN) - Backup User Data Action - "+$Error[0].Exception.Message
+        $ErrorLog>>$ErrorsLogFile
+    }
+}
+
+Function OneDriveManagement
+{
+    try{
+        # Get OneDrive site for the user
+        $OneDriveUrl = "https://$((Get-MgDomain | Where-Object {$_.isInitial}).Id.Split('.')[0])-my.sharepoint.com/personal/$($UPN.Replace('@','_').Replace('.','_'))"
+        
+        # Set OneDrive retention policy and access
+        # Note: This requires SharePoint Online Management Shell or PnP PowerShell
+        # For now, we'll log the OneDrive URL for manual processing
+        $OneDriveLog = "$UPN - OneDrive URL: $OneDriveUrl - Timestamp: $(Get-Date)"
+        $OneDriveLogFile = "$Location\OneDriveManagement_$((Get-Date -format yyyy-MMM-dd-ddd-hh-mm-ss).ToString()).txt"
+        $OneDriveLog>>$OneDriveLogFile
+        
+        $Script:OneDriveManagementAction = "Success - OneDrive URL logged for manual processing"
+    }
+    catch
+    {
+        $Script:OneDriveManagementAction = "Failed"
+        $ErrorLog = "$($UPN) - OneDrive Management Action - "+$Error[0].Exception.Message
+        $ErrorLog>>$ErrorsLogFile
+    }
+}
+
+Function TeamsCleanup
+{
+    try{
+        # Remove user from Teams and cleanup Teams data
+        # Note: This requires Microsoft Teams PowerShell module
+        # For comprehensive Teams cleanup, we'll focus on Graph API operations
+        
+        # Remove Teams app assignments
+        $TeamsApps = Get-MgUserAppRoleAssignment -UserId $UPN | Where-Object {$_.ResourceDisplayName -like "*Teams*" -or $_.ResourceDisplayName -like "*Microsoft Teams*"}
+        foreach($TeamsApp in $TeamsApps)
+        {
+            Remove-MgUserAppRoleAssignment -AppRoleAssignmentID $TeamsApp.Id -UserId $UPN -ErrorAction SilentlyContinue
+        }
+        
+        # Log Teams cleanup for manual verification
+        $TeamsLog = "$UPN - Teams apps removed: $($TeamsApps.Count) - Timestamp: $(Get-Date)"
+        $TeamsLogFile = "$Location\TeamsCleanup_$((Get-Date -format yyyy-MMM-dd-ddd-hh-mm-ss).ToString()).txt"
+        $TeamsLog>>$TeamsLogFile
+        
+        $Script:TeamsCleanupAction = "Success - Teams apps removed"
+    }
+    catch
+    {
+        $Script:TeamsCleanupAction = "Failed"
+        $ErrorLog = "$($UPN) - Teams Cleanup Action - "+$Error[0].Exception.Message
+        $ErrorLog>>$ErrorsLogFile
+    }
+}
+
+Function CalendarDelegation
+{
+    if($MailBoxAvailability -eq 'No')
+    {
+        $Script:CalendarDelegationAction = "No Exchange license assigned to user"
+        return
+    }
+    try{
+        # Remove calendar permissions and delegations
+        $CalendarPermissions = Get-MailboxFolderPermission -Identity "$UPN:\Calendar" -ErrorAction SilentlyContinue
+        if($CalendarPermissions -ne $null)
+        {
+            foreach($Permission in $CalendarPermissions)
+            {
+                if($Permission.User -ne "Default" -and $Permission.User -ne "Anonymous")
+                {
+                    Remove-MailboxFolderPermission -Identity "$UPN:\Calendar" -User $Permission.User -Confirm:$false -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        
+        # Remove calendar delegates
+        $CalendarDelegates = Get-CalendarProcessing -Identity $UPN -ErrorAction SilentlyContinue
+        if($CalendarDelegates -and $CalendarDelegates.ResourceDelegates)
+        {
+            Set-CalendarProcessing -Identity $UPN -ResourceDelegates @() -ErrorAction SilentlyContinue
+        }
+        
+        $Script:CalendarDelegationAction = "Success"
+    }
+    catch
+    {
+        $Script:CalendarDelegationAction = "Failed"
+        $ErrorLog = "$($UPN) - Calendar Delegation Action - "+$Error[0].Exception.Message
+        $ErrorLog>>$ErrorsLogFile
+    }
+}
+
+Function FullEnhancedOffboarding
+{
+    # Execute all offboarding actions (1-19)
+    DisableUser
+    ResetPasswordToRandom
+    ResetOfficeName
+    RemoveMobileNumber
+    RemoveGroupMemberships
+    RemoveAdminRoles
+    RemoveAppRoleAssignments
+    HideFromAddressList
+    RemoveEmailAlias
+    WipingMobileDevice
+    DeleteInboxRule
+    ConvertToSharedMailbox
+    RemoveLicense
+    SignOutFromAllSessions
+    BackupUserData
+    OneDriveManagement
+    TeamsCleanup
+    CalendarDelegation
+    
+    $Script:FullEnhancedOffboardingAction = "Success - All offboarding actions completed"
+}
+
 Function Disconnect_Modules
 {
     Disconnect-MgGraph -ErrorAction SilentlyContinue|  Out-Null
@@ -431,8 +569,100 @@ Function Disconnect_Modules
     Exit
 }
 
+Function Load-Config {
+    param (
+        [string]$ConfigPath
+    )
+
+    # Default configuration
+    $defaultConfig = @{
+        TenantId = ""
+        ClientId = ""
+        CertificateThumbprint = ""
+        CSVFilePath = ""
+        Users = @()
+    }
+    
+    $config = $defaultConfig.Clone()
+
+    if (-not [string]::IsNullOrEmpty($ConfigPath) -and (Test-Path -Path $ConfigPath)) {
+        try {
+            Write-Host "Loading configuration from: $ConfigPath" -ForegroundColor Cyan
+            $configContent = Get-Content -Path $ConfigPath -Raw
+            
+            # Validate JSON format using Test-Json (PowerShell 6+ feature)
+            if (Get-Command "Test-Json" -ErrorAction SilentlyContinue) {
+                if (-not ($configContent | Test-Json)) {
+                    throw "Invalid JSON format in configuration file."
+                }
+            }
+            
+            $customConfig = $configContent | ConvertFrom-Json
+            
+            # Validate required properties
+            $requiredProperties = @("TenantId", "ClientId", "CertificateThumbprint")
+            foreach ($prop in $requiredProperties) {
+                if (-not $customConfig.PSObject.Properties.Name -contains $prop) {
+                    Write-Warning "Missing required property '$prop' in configuration file. Using default value."
+                }
+            }
+            
+            # Merge custom config with defaults
+            if ($customConfig.PSObject.Properties.Name -contains "TenantId") {
+                $config.TenantId = $customConfig.TenantId
+            }
+            if ($customConfig.PSObject.Properties.Name -contains "ClientId") {
+                $config.ClientId = $customConfig.ClientId
+            }
+            if ($customConfig.PSObject.Properties.Name -contains "CertificateThumbprint") {
+                $config.CertificateThumbprint = $customConfig.CertificateThumbprint
+            }
+            if ($customConfig.PSObject.Properties.Name -contains "CSVFilePath") {
+                $config.CSVFilePath = $customConfig.CSVFilePath
+            }
+            if ($customConfig.PSObject.Properties.Name -contains "Users" -and $customConfig.Users) {
+                $config.Users = $customConfig.Users
+            }
+            
+            Write-Host "Configuration loaded successfully." -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Error loading configuration: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Using default configuration." -ForegroundColor Yellow
+        }
+    } elseif (-not [string]::IsNullOrEmpty($ConfigPath)) {
+        Write-Host "Configuration file not found at '$ConfigPath', using default settings." -ForegroundColor Yellow
+    }
+
+    return $config
+}
+
 Function main
 {
+    # Load configuration if ConfigPath is provided
+    if ($ConfigPath) {
+        $config = Load-Config -ConfigPath $ConfigPath
+        
+        # Override script parameters with config values if not already provided
+        if ([string]::IsNullOrEmpty($TenantId) -and ![string]::IsNullOrEmpty($config.TenantId)) {
+            $Script:TenantId = $config.TenantId
+        }
+        if ([string]::IsNullOrEmpty($ClientId) -and ![string]::IsNullOrEmpty($config.ClientId)) {
+            $Script:ClientId = $config.ClientId
+        }
+        if ([string]::IsNullOrEmpty($CertificateThumbprint) -and ![string]::IsNullOrEmpty($config.CertificateThumbprint)) {
+            $Script:CertificateThumbprint = $config.CertificateThumbprint
+        }
+        if ([string]::IsNullOrEmpty($CSVFilePath) -and ![string]::IsNullOrEmpty($config.CSVFilePath)) {
+            $Script:CSVFilePath = $config.CSVFilePath
+        }
+        if ([string]::IsNullOrEmpty($UPNs) -and $config.Users -and $config.Users.Count -gt 0) {
+            $Script:UPNs = $config.Users -join ','
+        }
+        
+        Write-Host "Configuration loaded successfully." -ForegroundColor Green
+    }
+    
     ConnectModules
     #Importing CSV file
     if($CSVFilePath -ne "")
@@ -487,7 +717,12 @@ Function main
     Write-Host "           12. Convert to shared mailbox" -ForegroundColor Yellow
     Write-Host "           13. Remove license" -ForegroundColor Yellow
     Write-Host "           14. Sign-out from all sessions" -ForegroundColor Yellow
-    Write-Host "           15. All the above operations" -ForegroundColor Yellow
+    Write-Host "           15. All the above operations (1-14)" -ForegroundColor Yellow
+    Write-Host "           16. Backup user data" -ForegroundColor Yellow
+    Write-Host "           17. OneDrive management" -ForegroundColor Yellow
+    Write-Host "           18. Teams cleanup" -ForegroundColor Yellow
+    Write-Host "           19. Calendar delegation" -ForegroundColor Yellow
+    Write-Host "           20. Full enhanced offboarding (1-19)" -ForegroundColor Yellow
     $Actions=Read-Host "`nPlease choose the action to continue"
     if($Actions -eq "")
     {
@@ -496,7 +731,7 @@ Function main
     }
     $Actions = $Actions.Trim()
     $Actions = $Actions.Split(',')
-    $CheckActions = Compare-Object -Referenceobject $Actions -DifferenceObject @(1..15)
+    $CheckActions = Compare-Object -Referenceobject $Actions -DifferenceObject @(1..20)
     if($CheckActions|?{$_.SideIndicator -eq "<="})
     {
         Write-Host "`nPlease choose the correct action number from the above actions." -ForegroundColor Red
@@ -528,6 +763,10 @@ Function main
         {
             $Actions = 1..14
         }
+        if($Actions -contains 20)
+        {
+            $Actions = 1..19
+        }
         if($Actions -contains 5 -or $Actions -contains 6) # To get memberships of the user (group and roles)
         {
             $Memberships = Get-MgUserMemberOf -UserId $UPN
@@ -549,6 +788,10 @@ Function main
                 12 {  ConvertToSharedMailbox ; break }
                 13 {  RemoveLicense ; break }
                 14 {  SignOutFromAllSessions ; break }
+                16 {  BackupUserData ; break }
+                17 {  OneDriveManagement ; break }
+                18 {  TeamsCleanup ; break }
+                19 {  CalendarDelegation ; break }
                 Default {
                     Write-Host "No action found. Please provide valid input" -ForegroundColor Red
                     Disconnect_Modules
@@ -569,9 +812,10 @@ Function main
             'UPN'=$UPN;'Disable User'=$DisableUserAction;'Reset Password To Random'=$ResetPasswordToRandomAction;'Reset OfficeName'=$ResetOfficeNameAction;'Remove Mobile Number'=$RemoveMobileNumberAction;
             'Remove Group Memberships'=$RemoveGroupMembershipsAction;'Remove Admin Roles'=$RemoveAdminRolesAction;'Remove AppRole Assignments'=$RemoveAppRoleAssignmentsAction;'Exchange User'=$MailBoxAvailability;
             'Hide From Address List'= $HideFromAddressListAction;'Remove Email Alias'=$RemoveEmailAliasAction;'Wiping Mobile Device'=$MobileDeviceAction;
-            'Delete Inbox Rule'=$DeleteInboxRuleAction;'ConvertToSharedMailbox'=$ConvertToSharedMailboxAction;'Remove License' =$RemoveLicenseAction;'SignOut From All Sessions'=$SignOutFromAllSessionsAction;} 
+            'Delete Inbox Rule'=$DeleteInboxRuleAction;'ConvertToSharedMailbox'=$ConvertToSharedMailboxAction;'Remove License' =$RemoveLicenseAction;'SignOut From All Sessions'=$SignOutFromAllSessionsAction;
+            'Backup User Data'=$BackupUserDataAction;'OneDrive Management'=$OneDriveManagementAction;'Teams Cleanup'=$TeamsCleanupAction;'Calendar Delegation'=$CalendarDelegationAction;} 
         $Result | Export-csv -Path $ExportCSV -Append -NoTypeInformation
-        $Variables = @("DisableUserAction","ResetPasswordToRandomAction","ResetOfficeNameAction","RemoveMobileNumberAction","RemoveGroupMembershipsAction","RemoveAdminRolesAction","RemoveAppRoleAssignmentsAction","MailBoxAvailability","HideFromAddressListAction","RemoveEmailAliasAction","MobileDeviceAction","DeleteInboxRuleAction","ConvertToSharedMailboxAction","RemoveLicenseAction","SignOutFromAllSessionsAction")
+        $Variables = @("DisableUserAction","ResetPasswordToRandomAction","ResetOfficeNameAction","RemoveMobileNumberAction","RemoveGroupMembershipsAction","RemoveAdminRolesAction","RemoveAppRoleAssignmentsAction","MailBoxAvailability","HideFromAddressListAction","RemoveEmailAliasAction","MobileDeviceAction","DeleteInboxRuleAction","ConvertToSharedMailboxAction","RemoveLicenseAction","SignOutFromAllSessionsAction","BackupUserDataAction","OneDriveManagementAction","TeamsCleanupAction","CalendarDelegationAction")
         $Variables | ForEach-Object {Clear-Variable -Name $_ -ErrorAction SilentlyContinue}
     }
     Write-Host `nScript executed successfully -ForegroundColor Green

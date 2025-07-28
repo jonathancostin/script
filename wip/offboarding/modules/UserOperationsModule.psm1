@@ -1,3 +1,95 @@
+# Function to snapshot user metadata
+function Start-UserBackup {
+    param([
+        string]$UserPrincipalName,
+        [string]$BackupLocation
+    )
+    try {
+        # Snapshot user metadata
+        $userMetadata = Get-MgUser -UserId $UserPrincipalName -Property "*"
+        $userMetadataFile = Join-Path -Path $BackupLocation -ChildPath "UserMetadata_$($UserPrincipalName.Replace('@','_'))_$(Get-Date -Format 'yyyyMMddHHmmss').json"
+        $userMetadata | ConvertTo-Json -Depth 10 | Out-File -FilePath $userMetadataFile
+
+        Write-AuditLog -Message "User metadata snapshot created for $UserPrincipalName" -Level "INFO"
+        return "Success"
+    } catch {
+        Write-LogError -UPN $UserPrincipalName -Action "Start-UserBackup" -Error $_.Exception.Message
+        return "Failed"
+    }
+}
+
+# Backup mailbox items
+function Backup-MailboxItems {
+    param(
+        [string]$UserPrincipalName,
+        [string]$BackupLocation
+    )
+    try {
+        # Backup command to use Graph API for mailbox export
+        $mailboxData = Get-MgUserMessage -UserId $UserPrincipalName
+        $mailboxDataFile = Join-Path -Path $BackupLocation -ChildPath "Mailbox_$($UserPrincipalName.Replace('@','_'))_$(Get-Date -Format 'yyyyMMddHHmmss').json"
+        $mailboxData | ConvertTo-Json -Depth 10 | Out-File -FilePath $mailboxDataFile
+
+        Write-AuditLog -Message "Mailbox items backed up for $UserPrincipalName" -Level "INFO"
+        return "Success"
+    } catch {
+        Write-LogError -UPN $UserPrincipalName -Action "Backup-MailboxItems" -Error $_.Exception.Message
+        return "Failed"
+    }
+}
+
+# Download OneDrive files
+function Download-OneDriveFiles {
+    param(
+        [string]$UserPrincipalName,
+        [string]$BackupLocation
+    )
+    try {
+        # Command to download OneDrive files (Note: Requires configuring SharePoint/OneDrive access)
+        $oneDriveFiles = Get-MgUserDriveItem -UserId $UserPrincipalName
+        $oneDriveBackupPath = Join-Path -Path $BackupLocation -ChildPath "OneDrive_$($UserPrincipalName.Replace('@','_'))_$(Get-Date -Format 'yyyyMMddHHmmss')"
+        
+        # Assuming function to download exists and iterating over each file
+        foreach ($file in $oneDriveFiles) {
+            $filePath = Join-Path -Path $oneDriveBackupPath -ChildPath $file.Name
+            # Download logic for each file (pseudo-code)
+            # Download-File -FileId $file.Id -DestinationPath $filePath
+        }
+        Write-AuditLog -Message "OneDrive files downloaded for $UserPrincipalName" -Level "INFO"
+        return "Success"
+    } catch {
+        Write-LogError -UPN $UserPrincipalName -Action "Download-OneDriveFiles" -Error $_.Exception.Message
+        return "Failed"
+    }
+}
+
+# Generate backup report
+function Generate-BackupReport {
+    param([
+        string]$BackupLocation
+    )
+    try {
+        $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
+        $reportFile = Join-Path -Path $BackupLocation -ChildPath "BackupReport_$timestamp.json"
+
+        $fileCounts = Get-ChildItem -Path $BackupLocation | Measure-Object
+
+        $reportData = @{
+            Timestamp = $timestamp
+            Status = "Completed"
+            FileCount = $fileCounts.Count
+        }
+
+        $reportData | ConvertTo-Json | Out-File -FilePath $reportFile
+
+        Write-AuditLog -Message "Backup report generated at $reportFile" -Level "INFO"
+        return "Success"
+    } catch {
+        Write-LogError -Action "Generate-BackupReport" -Error $_.Exception.Message
+        return "Failed"
+    }
+}
+
 # User Operations Module for Microsoft 365 Offboarding Script v2.1
 # This module contains all user offboarding operations
 

@@ -1,6 +1,3 @@
-# Sample configuration template for Microsoft 365 Offboarding Script
-# Modify this template to match your organization-specific settings
-
 {
     "TenantId": "YOUR_TENANT_ID",
     "ClientId": "YOUR_CLIENT_ID",
@@ -9,11 +6,5 @@
     "Users": [
         "user1@yourtenant.onmicrosoft.com",
         "user2@yourtenant.onmicrosoft.com"
-    ],
-    "LogDirectory": "path/to/logs",
-    "Modules": {
-        "Logging": "./modules/LoggingModule.psm1",
-        "UserOperations": "./modules/UserOperationsModule.psm1",
-        "Authentication": "./modules/AuthenticationModule.psm1"
-    }
+    ]
 }
