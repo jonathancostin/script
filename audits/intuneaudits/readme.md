@@ -7,15 +7,42 @@ This PowerShell script audits a Microsoft Intune environment to report on user d
 
 ## Features
 
-*   Connects to Microsoft Graph using the PowerShell SDK.
-*   Retrieves members from two specified Azure AD groups:
-    *   An "All Users" group (or a target scope of users).
-    *   A group used for Conditional Access policies requiring compliant devices.
-*   Fetches all managed devices from the Intune tenant.
-*   **Filters devices locally** within the script to accurately associate devices with users based on Primary User (`userId`) or Enroller (`enrolledByUserId`).
-*   Generates a CSV file with one row per user.
-*   Device details (Name, OS, Compliance Status, Relationship, etc.) are expanded horizontally across columns (`Device1_Name`, `Device2_Name`, etc.).
-*   Allows configuration of the maximum number of devices to report per user.
+* Connects to Microsoft Graph using the PowerShell SDK.
+* Retrieves members from two specified Azure AD groups:
+  * An "All Users" group (or a target scope of users).
+  * A group used for Conditional Access policies requiring compliant devices.
+* Fetches all managed devices from the Intune tenant.
+* **Filters devices locally** within the script to accurately associate devices with users based on Primary User (`userId`) or Enroller (`enrolledByUserId`).
+* Generates a CSV file with one row per user.
+* Device details (Name, OS, Compliance Status, Relationship, etc.) are expanded horizontally across columns (`Device1_Name`, `Device2_Name`, etc.).
+* Allows configuration of the maximum number of devices to report per user.
+
+## Parameters
+
+### Required Parameters
+| Parameter | Description |
+|-----------|-------------|
+| **AllUsersGroupId** | The Azure AD group ID containing all users you want to include in the audit |
+| **CompliantUsersGroupId** | The dynamic group ID used for Intune compliance enforcement |
+
+### Optional Parameters
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| **MaxDevices** | Maximum number of devices to report per user | `10` |
+| **OutputFile** | Path to export the audit results to | Automatically generated in current directory |
+
+## Usage
+
+Run the script from a PowerShell console, providing the necessary Group IDs:
+
+```powershell
+# Run with defaults
+Connect-MgGraph -Scopes "User.Read.All", "GroupMember.Read.All", "DeviceManagementManagedDevices.Read.All"
+.\IntuneComplianceAudit.ps1 -AllUsersGroupId <GUID_of_All_Users_Group> -CompliantUsersGroupId <GUID_of_Compliant_Devices_Group>
+
+# Run with custom device limit and output file
+.\IntuneComplianceAudit.ps1 -AllUsersGroupId <GUID_of_All_Users_Group> -CompliantUsersGroupId <GUID_of_Compliant_Devices_Group> -MaxDevices 15 -OutputFile "C:\Reports\CustomIntuneAudit.csv"
+```
 
 ## Prerequisites
 

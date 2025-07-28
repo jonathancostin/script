@@ -23,61 +23,121 @@ This directory contains PowerShell scripts for auditing Microsoft 365 and Exchan
 ### Setup Instructions
 1. Install required PowerShell modules:
    ```powershell
+   # Core modules required for all scripts
    Install-Module ExchangeOnlineManagement -Force
    Install-Module Microsoft.Graph -Force
+   
+   # Specific Graph modules (installed automatically by scripts if missing)
+   Install-Module Microsoft.Graph.Users -Force
+   Install-Module Microsoft.Graph.Groups -Force
+   Install-Module Microsoft.Graph.DeviceManagement -Force
    ```
-2. Ensure you have appropriate permissions in Microsoft 365
-3. Run scripts with administrative privileges
+2. Ensure you have appropriate permissions in Microsoft 365:
+   - Exchange Administrator (for mailbox operations)
+   - Global Reader or User Administrator (for user data)
+   - Intune Administrator (for device compliance data)
+3. Configure admin consent for Microsoft Graph permissions
+4. Run scripts with administrative privileges
 
 ## Scripts Overview
 
 Brief description of each script included in the project:
 
-| Script Name | Purpose | Main Function |
-|-------------|---------|---------------|
-| MailboxAudit.ps1 | Audits mailbox sizes across Exchange Online | Generates comprehensive mailbox size reports including primary and archive mailboxes |
-| megaaudit.ps1 | Comprehensive user compliance and device audit | Performs multi-service audit including user activity, MFA status, and Intune compliance |
+| Script Directory | Script Name | Purpose | Main Function |
+|------------------|-------------|---------|---------------|
+| mailboxaudit/ | MailboxAudit.ps1 | Audits mailbox sizes across Exchange Online | Generates comprehensive mailbox size reports including primary and archive mailboxes |
+| megaaudit/ | megaaudit.ps1 | Comprehensive user compliance and device audit | Performs multi-service audit including user activity, MFA status, and Intune compliance |
+| officeaudits/ | o365Reporter.ps1 | User activity and MFA reporting | Analyzes user sign-in activity, license assignments, MFA status, and device enrollment |
+| intuneaudits/ | IntuneComplianceAudit.ps1 | Intune device compliance auditing | Reports on device compliance status for users in specified groups |
 
 ## Usage
 
-### Basic Usage
-```powershell
-# Basic mailbox audit
-.\MailboxAudit.ps1
+### Prerequisites - Authentication
+All scripts require proper authentication to Microsoft services before execution:
 
-# Comprehensive mega audit
-.\megaaudit.ps1 -AllUsersGroupId "group-id" -CompliantUsersGroupId "compliant-group-id"
+```powershell
+# Connect to Microsoft Graph (required for most scripts)
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "GroupMember.Read.All", "UserAuthenticationMethod.Read.All"
+
+# Connect to Exchange Online (required for mailbox operations)
+Connect-ExchangeOnline
 ```
 
-### Examples
+### Basic Usage
+```powershell
+# Basic mailbox audit (requires Exchange Online connection)
+Connect-ExchangeOnline
+.\mailboxaudit\MailboxAudit.ps1
+
+# Comprehensive mega audit (requires both Graph and Exchange connections)
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "GroupMember.Read.All", "UserAuthenticationMethod.Read.All"
+Connect-ExchangeOnline
+.\megaaudit\megaaudit.ps1 -AllUsersGroupId "group-id" -CompliantUsersGroupId "compliant-group-id"
+
+# Office 365 Reporter (user activity and MFA reporting)
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All"
+Connect-ExchangeOnline
+.\officeaudits\o365Reporter.ps1
+
+# Intune Compliance Audit
+Connect-MgGraph -Scopes "User.Read.All", "GroupMember.Read.All", "DeviceManagementManagedDevices.Read.All"
+.\intuneaudits\IntuneComplianceAudit.ps1 -AllUsersGroupId "group-id" -CompliantUsersGroupId "compliant-group-id"
+```
+
+### Examples with Full Connection Commands
 ```powershell
 # Example 1: Basic mailbox audit
-.\MailboxAudit.ps1
+Connect-ExchangeOnline
+.\mailboxaudit\MailboxAudit.ps1
 
 # Example 2: Mega audit with specific groups
-.\megaaudit.ps1 -AllUsersGroupId "12345-abcd-67890" -CompliantUsersGroupId "67890-efgh-12345"
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "GroupMember.Read.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All", "Policy.Read.All"
+Connect-ExchangeOnline
+.\megaaudit\megaaudit.ps1 -AllUsersGroupId "12345-abcd-67890" -CompliantUsersGroupId "67890-efgh-12345"
 
 # Example 3: Mega audit with custom device limit
-.\megaaudit.ps1 -AllUsersGroupId "12345-abcd-67890" -CompliantUsersGroupId "67890-efgh-12345" -MaxDevices 15
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "GroupMember.Read.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All", "Policy.Read.All"
+Connect-ExchangeOnline
+.\megaaudit\megaaudit.ps1 -AllUsersGroupId "12345-abcd-67890" -CompliantUsersGroupId "67890-efgh-12345" -MaxDevices 15
+
+# Example 4: Intune compliance audit
+Connect-MgGraph -Scopes "User.Read.All", "GroupMember.Read.All", "DeviceManagementManagedDevices.Read.All"
+.\intuneaudits\IntuneComplianceAudit.ps1 -AllUsersGroupId "12345-abcd-67890" -CompliantUsersGroupId "67890-efgh-12345" -MaxDevices 20
 ```
 
 ## Parameters
 
-### Required Parameters (megaaudit.ps1)
+### Required Parameters by Script
+
+#### megaaudit.ps1
 | Parameter | Description | Type | Example |
 |-----------|-------------|------|---------|
 | AllUsersGroupId | ID of the group containing all users to audit | string | `"12345-abcd-67890"` |
 | CompliantUsersGroupId | ID of the compliant users group | string | `"67890-efgh-12345"` |
 
-### Optional Parameters (megaaudit.ps1)
+#### IntuneComplianceAudit.ps1
+| Parameter | Description | Type | Example |
+|-----------|-------------|------|---------|
+| AllUsersGroupId | ID of the group containing all users to audit | string | `"12345-abcd-67890"` |
+| CompliantUsersGroupId | ID of the group used for conditional access compliance | string | `"67890-efgh-12345"` |
+
+### Optional Parameters
+
+#### megaaudit.ps1 & IntuneComplianceAudit.ps1
 | Parameter | Description | Type | Default | Example |
 |-----------|-------------|------|---------|---------|
 | MaxDevices | Maximum number of devices to report per user | integer | 10 | `-MaxDevices 15` |
 
+#### IntuneComplianceAudit.ps1
+| Parameter | Description | Type | Default | Example |
+|-----------|-------------|------|---------|---------|
+| OutputFile | Custom output file path | string | Auto-generated | `-OutputFile "C:\Reports\IntuneAudit.csv"` |
+
 ### Parameter Details
 - **AllUsersGroupId**: The Azure AD group ID containing all users you want to include in the audit
-- **CompliantUsersGroupId**: The dynamic group ID used for Intune compliance enforcement
+- **CompliantUsersGroupId**: The dynamic group ID used for Intune compliance enforcement or conditional access
 - **MaxDevices**: Controls how many device columns are included in the output CSV
+- **OutputFile**: Allows custom naming of output files (IntuneComplianceAudit.ps1 only)
 
 ## Output Description
 
@@ -131,19 +191,104 @@ Description of the expected output format(s):
 ### Troubleshooting
 Common issues and their solutions:
 
+#### Authentication Issues
 1. **Issue**: "Connect-ExchangeOnline failed"
-   - **Solution**: Verify Exchange Online Management module is installed and up to date
+   - **Solution**: 
+     ```powershell
+     # Update Exchange Online Management module
+     Update-Module ExchangeOnlineManagement -Force
+     
+     # Try connecting with specific tenant
+     Connect-ExchangeOnline -Organization "yourtenant.onmicrosoft.com"
+     ```
+   - Verify Exchange administrator permissions
    - Check network connectivity and firewall settings
-   - Ensure account has Exchange administrator permissions
+   - Ensure MFA is properly configured for admin account
 
-2. **Issue**: "Failed to retrieve MFA for user"
-   - **Solution**: Verify Microsoft Graph permissions include UserAuthenticationMethod.Read.All
+2. **Issue**: "Connect-MgGraph authentication failed"
+   - **Solution**:
+     ```powershell
+     # Clear cached credentials
+     Disconnect-MgGraph
+     
+     # Reconnect with explicit scopes
+     Connect-MgGraph -Scopes "User.Read.All", "Directory.Read.All" -TenantId "your-tenant-id"
+     ```
+   - Ensure admin consent has been granted for required permissions
+   - Verify conditional access policies aren't blocking the connection
+
+3. **Issue**: "Insufficient privileges to complete the operation"
+   - **Solution**: Verify the following roles are assigned:
+     - Exchange Administrator (for mailbox operations)
+     - Global Reader or User Administrator (for user data)
+     - Intune Administrator (for device compliance data)
+
+#### Data Retrieval Issues
+4. **Issue**: "Failed to retrieve MFA for user"
+   - **Solution**: 
+     ```powershell
+     # Test Graph permissions
+     Get-MgUser -Top 1 -Select "id,displayName"
+     
+     # Verify required scope
+     Connect-MgGraph -Scopes "UserAuthenticationMethod.Read.All"
+     ```
    - Check if user account has appropriate Graph API permissions
+   - Ensure the authentication methods policy allows querying MFA status
 
-3. **Issue**: Large datasets causing timeouts
+5. **Issue**: "No mailbox found for user"
+   - **Solution**: Some users may not have mailboxes assigned
+     ```powershell
+     # Check if user has a mailbox
+     Get-Recipient -Identity "user@domain.com" -ErrorAction SilentlyContinue
+     ```
+   - This is normal for unlicensed users or those without Exchange licenses
+
+6. **Issue**: "Device information not available"
+   - **Solution**: 
+     ```powershell
+     # Verify Intune connection
+     Get-MgDeviceManagementManagedDevice -Top 1
+     ```
+   - Ensure devices are enrolled in Intune
+   - Check that DeviceManagementManagedDevices.Read.All permission is granted
+
+#### Performance Issues
+7. **Issue**: Large datasets causing timeouts
    - **Solution**: Process in smaller batches or during off-peak hours
+     ```powershell
+     # For large organizations, consider filtering
+     $Users = Get-MgUser -Filter "accountEnabled eq true" -Top 100
+     ```
    - Increase timeout values if possible
    - Consider running against specific user groups rather than entire tenant
+
+8. **Issue**: "Script running slowly"
+   - **Solution**: 
+     - Run during off-peak hours when API throttling is less likely
+     - Implement retry logic for throttled requests
+     - Consider parallel processing for large datasets (use with caution)
+
+#### Output and Reporting Issues
+9. **Issue**: "CSV file is empty or incomplete"
+   - **Solution**: 
+     ```powershell
+     # Check if variables contain data before export
+     Write-Host "Users found: $($Users.Count)"
+     
+     # Verify export path is writable
+     Test-Path -Path "C:\Reports" -PathType Container
+     ```
+   - Ensure output directory exists and is writable
+   - Check for errors during data collection that might prevent export
+
+10. **Issue**: "Special characters in output causing issues"
+    - **Solution**: 
+      ```powershell
+      # Use UTF-8 encoding for international characters
+      $Results | Export-Csv -Path "report.csv" -NoTypeInformation -Encoding UTF8
+      ```
+    - Clean data before export to remove problematic characters
 
 ### Version History
 - v1.0.0: Initial MailboxAudit.ps1 release

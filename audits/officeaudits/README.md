@@ -67,23 +67,41 @@ The script performs the following actions:
 
 ## Usage
 
+### Prerequisites - Authentication
+Make sure you have connected to both Microsoft Graph and Exchange Online before executing this script:
+
+```powershell
+# Connect to Microsoft Graph with required scopes
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "User.ReadBasic.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All", "Policy.Read.All"
+
+# Connect to Exchange Online
+Connect-ExchangeOnline
+```
+
+### Basic Usage
+
 1. **Open PowerShell as Administrator**.
 
-2. **Run the Script**:
+2. **Authenticate to required services** (as shown above).
+
+3. **Run the Script**:
 
    ```powershell
    .\o365Reporter.ps1
    ```
 
-3. **Authenticate**:
-
-   - The script will prompt you to sign in for Microsoft Graph and Exchange Online.
-   - Use an account with the necessary permissions.
-
 4. **Wait for Completion**:
 
    - The script processes each user and displays progress in the console.
    - Upon completion, it generates `ActiveUsers.csv` and `InactiveUsers.csv` in a `Results` folder.
+
+### Command Examples
+```powershell
+# Full execution with authentication
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "User.ReadBasic.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All", "Policy.Read.All"
+Connect-ExchangeOnline
+.\o365Reporter.ps1
+```
 
 ## Script Details
 
@@ -133,20 +151,69 @@ The script performs the following actions:
 ## Error Handling
 
 - **Mailbox Access**:
-
   - If the script cannot access a user's mailbox, it logs an error and continues processing.
+  - Common for unlicensed users or those without Exchange Online licenses.
 
 - **MFA Retrieval**:
-
   - If MFA methods cannot be retrieved, the script logs a warning and sets MFA status to "Error" or "Unknown".
+  - Verify UserAuthenticationMethod.Read.All permission is granted.
 
 - **Device Retrieval**:
-
   - If device information cannot be retrieved, it logs a warning and continues.
+  - Ensure devices are enrolled in Intune and DeviceManagementManagedDevices.Read.All permission is granted.
 
 - **General Exceptions**:
-
   - The script uses try-catch blocks to handle exceptions and ensure that one failure doesn't halt the entire process.
+  - All processing errors are logged to the console for troubleshooting.
+
+## Troubleshooting
+
+### Authentication Issues
+1. **Connection Failures**:
+   ```powershell
+   # If authentication fails, try disconnecting and reconnecting
+   Disconnect-MgGraph
+   Disconnect-ExchangeOnline
+   
+   # Reconnect with explicit tenant ID
+   Connect-MgGraph -TenantId "your-tenant-id" -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "UserAuthenticationMethod.Read.All"
+   Connect-ExchangeOnline -Organization "yourtenant.onmicrosoft.com"
+   ```
+
+2. **Permission Issues**:
+   - Ensure admin consent has been granted for all required Graph API permissions
+   - Verify the account has appropriate administrative roles
+   - Check conditional access policies aren't blocking the connection
+
+### Data Processing Issues
+3. **MFA Status Shows "Error"**:
+   - Some users may not have MFA configured, which is normal
+   - Verify UserAuthenticationMethod.Read.All permission
+   - Check if authentication methods policy allows querying MFA status
+
+4. **Missing Device Information**:
+   - Ensure devices are enrolled in Intune
+   - Verify DeviceManagementManagedDevices.Read.All permission is granted
+   - Some users may not have enrolled devices, which is normal
+
+5. **"No Mailbox" Errors**:
+   - Normal for unlicensed users or those without Exchange Online licenses
+   - Script continues processing and logs these users appropriately
+
+### Performance Issues
+6. **Script Running Slowly**:
+   - Large organizations may take significant time to process
+   - Consider running during off-peak hours
+   - Monitor memory usage for very large datasets
+
+7. **Empty or Incomplete Reports**:
+   ```powershell
+   # Verify users were retrieved
+   $Users = Get-MgUser -All -Select "id,displayName,userPrincipalName"
+   Write-Host "Total users found: $($Users.Count)"
+   ```
+   - Check that output directory (`Results`) is writable
+   - Verify no errors occurred during processing
 
 ## Notes
 

@@ -17,6 +17,18 @@ Install-Module -Name ExchangeOnlineManagement -Force
 ```
 
 ## Usage
+
+### Prerequisites - Authentication
+Make sure you have connected to Exchange Online before executing this script:
+
+```powershell
+# Connect to Exchange Online
+Connect-ExchangeOnline
+```
+
+### Basic Usage
+Run the following command to generate a comprehensive mailbox audit:
+
 ```powershell
 .\MailboxAudit.ps1
 ```
@@ -108,10 +120,10 @@ The script converts raw byte values to human-readable formats:
 - **Archive Mailboxes**: In-place archive reporting
 
 ## Error Handling
-- **Connection Issues**: Graceful handling of authentication failures
-- **Permission Errors**: Reports mailboxes that cannot be accessed
-- **Data Retrieval**: Continues processing when individual mailboxes fail
-- **Large Datasets**: Handles organizations with thousands of mailboxes
+- **Connection Issues**: Ensure that the ExchangeOnlineManagement module is updated. Verify login credentials and MFA settings.
+- **Permission Errors**: Ensure Exchange Administrator rights are assigned.
+- **Data Retrieval**: Continues processing when individual mailboxes fail with warning messages logged.
+- **Large Datasets**: Handles organizations with thousands of mailboxes but may require increased memory allocation for large result sets.
 
 ## Security Considerations
 - **Administrative Access**: Requires Exchange Online admin permissions

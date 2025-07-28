@@ -22,8 +22,32 @@ Install-Module -Name ExchangeOnlineManagement -Force
 ```
 
 ## Usage
+
+### Prerequisites - Authentication
+Make sure you have connected to both Microsoft Graph and Exchange Online before executing this script:
+
+```powershell
+# Connect to Microsoft Graph with required scopes
+Connect-MgGraph -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All", "User.ReadBasic.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All", "Policy.Read.All", "GroupMember.Read.All"
+
+# Connect to Exchange Online
+Connect-ExchangeOnline
+```
+
+### Basic Usage
+Run the script with the required Group IDs:
+
 ```powershell
 .\megaaudit.ps1 -AllUsersGroupId "group-id-here" -CompliantUsersGroupId "compliant-group-id-here" [-MaxDevices 10]
+```
+
+### Command Examples
+```powershell
+# Basic execution with required parameters
+.\megaaudit.ps1 -AllUsersGroupId "12345678-1234-1234-1234-123456789012" -CompliantUsersGroupId "87654321-4321-4321-4321-210987654321"
+
+# Execution with custom device limit
+.\megaaudit.ps1 -AllUsersGroupId "12345678-1234-1234-1234-123456789012" -CompliantUsersGroupId "87654321-4321-4321-4321-210987654321" -MaxDevices 15
 ```
 
 ### Parameters
@@ -161,7 +185,57 @@ The script collects comprehensive mailbox data:
 - **Filtering Logic**: Customize user filtering criteria
 
 ## Troubleshooting
-- **Module Errors**: Ensure all required PowerShell modules are installed
-- **Permission Issues**: Verify admin consent for all required Graph API permissions
-- **Report Directories**: Ensure specified output directory exists and is writable
-- **Large Datasets**: Monitor memory usage and consider processing in batches for very large organizations
+
+### Authentication Issues
+1. **Module Errors**: 
+   ```powershell
+   # Install required modules if missing
+   Install-Module Microsoft.Graph -Force
+   Install-Module ExchangeOnlineManagement -Force
+   ```
+
+2. **Permission Issues**: 
+   - Verify admin consent for all required Graph API permissions
+   - Ensure the account has Exchange Administrator and Global Reader roles
+   - Check that conditional access policies aren't blocking the connection
+
+3. **Connection Failures**: 
+   ```powershell
+   # If authentication fails, try disconnecting and reconnecting
+   Disconnect-MgGraph
+   Disconnect-ExchangeOnline
+   
+   # Reconnect with explicit tenant ID
+   Connect-MgGraph -TenantId "your-tenant-id" -Scopes "User.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.Read.All"
+   Connect-ExchangeOnline -Organization "yourtenant.onmicrosoft.com"
+   ```
+
+### Data Processing Issues
+4. **MFA Retrieval Errors**: 
+   - Verify UserAuthenticationMethod.Read.All permission is granted
+   - Some users may not have MFA configured, which is normal
+
+5. **Mailbox Access Issues**: 
+   - Some users may not have mailboxes (unlicensed users)
+   - Script continues processing and logs users without mailboxes
+
+6. **Device Information Missing**: 
+   - Ensure devices are enrolled in Intune
+   - Verify DeviceManagementManagedDevices.Read.All permission
+
+### Performance and Output Issues
+7. **Report Directories**: 
+   - Ensure specified output directory exists and is writable
+   - The script will prompt for a directory if not provided
+
+8. **Large Datasets**: 
+   - Monitor memory usage and consider processing in batches for very large organizations
+   - Consider running during off-peak hours
+   - For organizations with >10,000 users, consider reducing MaxDevices parameter
+
+9. **Empty or Incomplete Reports**: 
+   ```powershell
+   # Check if users were processed
+   Write-Host "Active users: $($ActiveResults.Count)"
+   Write-Host "Inactive users: $($InactiveResults.Count)"
+   ```
