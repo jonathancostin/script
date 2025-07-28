@@ -32,4 +32,3 @@ This script connects to both Exchange Online and Microsoft Graph to handle both 
 ## Contact
 
 - Author: Jonathan Costin
-- Email: jonathanc@7layerit.com

@@ -95,7 +95,6 @@
 .NOTES
     File Name      : New-M365Onboarding.ps1
     Author         : Jonathan Costin
-    Email          : jonathanc@7layerit.com
     Version        : 1.0.0
     Date Created   : December 2024
     
@@ -586,7 +585,6 @@ if ([string]::IsNullOrWhiteSpace($LicenseSku)) {
 Write-Host "=" * 80 -ForegroundColor Cyan
 Write-Host "  MICROSOFT 365 USER ONBOARDING AUTOMATION SCRIPT" -ForegroundColor Cyan
 Write-Host "  Version: 1.0.0" -ForegroundColor Cyan
-Write-Host "  Author: Jonathan Costin (jonathanc@7layerit.com)" -ForegroundColor Cyan
 Write-Host "=" * 80 -ForegroundColor Cyan
 Write-Host ""
 

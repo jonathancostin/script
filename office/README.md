@@ -172,6 +172,5 @@ Common issues and their solutions:
 
 ### Contact Information
 - Author: Jonathan Costin
-- Email: jonathanc@7layerit.com
 - Repository: [10Scripts Project]
 - Issues: Contact author for support and feature requests

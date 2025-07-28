@@ -23,5 +23,4 @@ Scripts in this directory will typically require:
 ## Contact Information
 
 - Author: Jonathan Costin
-- Email: jonathanc@7layerit.com
 - Repository: [10Scripts Project]
