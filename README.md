@@ -15,7 +15,7 @@ This project is a collection of scripts for various auditing and management task
 
 1. **Clone the Repository**:
    ```sh
-   git clone <repository_url>
+   git clone https://github.com/jonathancostin/script
    ```
 
 2. **Navigate to Scripts**:
