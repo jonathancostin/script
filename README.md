@@ -24,6 +24,18 @@ This project is a collection of scripts for various auditing and management task
    - `/mac` for macOS related scripts, such as cleanup tasks.
    - `/office` for handling Office 365 tasks.
 
+## yabai & skhd service management
+
+Use `manage_yabai_skhd.sh` to control the LaunchAgents:
+
+```shell
+./manage_yabai_skhd.sh start
+./manage_yabai_skhd.sh stop
+./manage_yabai_skhd.sh restart
+```
+
+The agents are configured to start automatically on user login via LaunchAgents.
+
 ## Reference Subdirectory READMEs
 
 Each subdirectory contains a `README.md` for more detailed information:

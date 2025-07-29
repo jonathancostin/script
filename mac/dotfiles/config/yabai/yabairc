@@ -48,6 +48,8 @@ setup_space 2 outlooktodo
 setup_space 3 ghostteams
 setup_space 4 open
 setup_space 5 open2
+setup_space 6 open3
+setup_space 7 open4
 
 
 # disable specific apps
