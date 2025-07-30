@@ -129,6 +129,7 @@ foreach ($u in $users)
   } else
   {
     Write-Host "  Archive already enabled." -ForegroundColor Gray
+    $enableexpand = Read-Host " enable autoexpanding archive? (y/n)"
   }
 
   # b) Assign the retention policy
@@ -140,6 +141,18 @@ foreach ($u in $users)
   Write-Host "  Running ManagedFolderAssistant…" -NoNewline
   Start-ManagedFolderAssistant -Identity $u
   Write-Host " Done" -ForegroundColor Green
+
+  if $enableexpand -eq 'y'
+  {
+    # d) Enable auto-expanding archive if requested
+    Write-Host "  Enabling auto-expanding archive…" -NoNewline
+    Enable-Mailbox -Identity $u -AutoExpandingArchive
+    Write-Host " Done" -ForegroundColor Green
+  } else
+  {
+    Write-Host "  Skipping auto-expanding archive." -ForegroundColor Gray
+  }
+
 }
 
 # 6. Verification
