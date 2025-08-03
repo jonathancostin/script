@@ -1,6 +1,8 @@
 
 # Project Overview and Purpose
 
+**⚠️ NOTICE: The ripper utility has been moved to a private repository. Please see the private repo for the latest version and updates.**
+
 This project is a collection of scripts for various auditing and management tasks, covering areas like Intune compliance, mailbox auditing, Office 365 reporting, and macOS system cleanup.
 
 ## Recent Updates
